@@ -38,6 +38,7 @@ gui_queue = queue.Queue()
 
 # UDP Socket
 udp_port = 5005  # Port for UDP communication
+broadcast_address = '255.255.255.255'  # Define broadcast address here
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # Enable broadcasting
 sock.bind(('', udp_port))
@@ -63,12 +64,12 @@ def process_udp_requests():
                     hashed_token = hashlib.sha256(token.encode()).hexdigest()
                     valid_tokens[hashed_token] = (username, time.time() + TOKEN_EXPIRY, request.get('client_id'))
                     response = {'token': token, 'request_id': request_id, 'server_name': server_name}
-                    sock.sendto(json.dumps(response).encode(), (broadcast_address, udp_port)) # Respond to broadcast so all clients listening can get it (filtering is done in the client). This is not a second broadcast. It is targeted to the client since the client includes it's address in the request.
+                    sock.sendto(json.dumps(response).encode(), (addr[0], udp_port))  # Send directly to client
                     logger.info(f"SUCCESS: {username} logged in from {addr[0]}:{addr[1]}.")
                     send_gui_message("log", f"SUCCESS: {username} logged in from {addr[0]}:{addr[1]}.")
                 else:
                     response = {'error': 'Invalid credentials', 'request_id': request_id, 'server_name': server_name}
-                    sock.sendto(json.dumps(response).encode(), (addr[0], udp_port)) # It needs to be sent through broadcast.
+                    sock.sendto(json.dumps(response).encode(), (addr[0], udp_port))
                     logger.warning(f"FAILURE: Invalid login attempt for username: {username} from {addr[0]}:{addr[1]}.")
                     send_gui_message("log", f"FAILURE: Invalid login attempt for {username} from {addr[0]}:{addr[1]}.")
 
@@ -81,7 +82,8 @@ def process_udp_requests():
                         logger.info(f"ACTION: {username} performed an action from {addr[0]}:{addr[1]}.")
                         send_gui_message("log", f"ACTION: {username} performed an action from {addr[0]}:{addr[1]}.")
                         response = {'message': f'Action performed for {username}', 'request_id': request_id, 'server_name': server_name}
-                        sock.sendto(json.dumps(response).encode(), (addr[0], udp_port))
+                        sock.sendto(json.dumps(response).encode(), (addr[0], udp_port))  # Send directly to client
+
                     else:
                         response = {'error': 'Token expired or invalid client', 'request_id': request_id, 'server_name': server_name}
                         sock.sendto(json.dumps(response).encode(), (addr[0], udp_port))
@@ -98,6 +100,7 @@ def process_udp_requests():
             pass  # No data received within timeout
         except json.JSONDecodeError:
             logger.warning("Received non-JSON data or malformed JSON data.")
+
 
 
 class ServerGUI:
@@ -134,13 +137,11 @@ class ServerGUI:
             logger.error(f"Image file not found: {BUILDING_LOGO}")
             send_gui_message("error", f"Image file not found: {BUILDING_LOGO}")
 
-
         self.clients_label = tk.Label(root, text="Connected Clients: 0", font=("Helvetica", 14))
         self.clients_label.pack()
 
         self.log_text = tk.Text(root, height=10, state='disabled')
         self.log_text.pack(fill=tk.BOTH, expand=True)
-
 
         self.error_label = tk.Label(root, text="", fg="red")  # For displaying errors
         self.error_label.pack()
@@ -151,13 +152,12 @@ class ServerGUI:
 
     def update_gui(self):
         # Check for expired tokens
-        expired_tokens = [token for token, (username, expiry) in valid_tokens.items() if time.time() > expiry]
+        expired_tokens = [token for token, (username, expiry, client_id) in valid_tokens.items() if time.time() > expiry] # Fix: unpack client_id
 
         for token in expired_tokens:
             del valid_tokens[token]
             logger.info(f"Token for {username} expired")
             send_gui_message("log", f"Token for {username} expired")
-
 
         while not gui_queue.empty():
             message = gui_queue.get()
@@ -180,6 +180,7 @@ class ServerGUI:
     def show_error(self, message):
         self.error_label.config(text=message)
         self.root.after(5000, lambda: self.error_label.config(text=""))  # Clear error after 5 seconds
+
 
 
 def main():
