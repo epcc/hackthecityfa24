@@ -57,8 +57,9 @@ def process_udp_requests():
             server_name = request.get('server_name')
 
             if request['type'] == 'login':
-                username = request.get('username')
-                password = request.get('password')
+                username = request['username']
+                password = request['password']
+
                 if username in VALID_CREDENTIALS and VALID_CREDENTIALS[username] == password:
                     token = str(uuid.uuid4())
                     hashed_token = hashlib.sha256(token.encode()).hexdigest()
@@ -100,8 +101,6 @@ def process_udp_requests():
             pass  # No data received within timeout
         except json.JSONDecodeError:
             logger.warning("Received non-JSON data or malformed JSON data.")
-
-
 
 class ServerGUI:
     def __init__(self, root):

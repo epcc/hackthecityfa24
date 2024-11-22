@@ -1,3 +1,4 @@
+# client.py
 import threading
 import queue
 import socket
@@ -52,10 +53,12 @@ actions_performed_count = 0
 log_queue = queue.Queue()
 udp_port = 5005  # Port for UDP communication
 broadcast_address = '255.255.255.255' # Broadcast address
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-server_socket.bind(('', 0))  # Bind to any free port
-server_socket.settimeout(0.5)
+
+# UDP Socket
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+client_socket.bind(('', udp_port))  # Bind to the specified port for receiving responses
+client_socket.settimeout(0.5)
 
 def log_message(message):
     log_queue.put(message)
@@ -72,11 +75,11 @@ def authenticate(server_name, server_address, username, password):
         'server_name': server_name
     }
     try:
-        server_socket.sendto(json.dumps(request).encode(), (broadcast_address, udp_port))
+        client_socket.sendto(json.dumps(request).encode(), (broadcast_address, udp_port))
         start_time = time.time()
         while time.time() - start_time < 5:
             try:
-                data, addr = server_socket.recvfrom(1024)
+                data, addr = client_socket.recvfrom(1024)
                 response = json.loads(data.decode())
                 if response.get('request_id') == request_id and response.get('server_name') == server_name:
                     if 'token' in response:
@@ -99,6 +102,8 @@ def authenticate(server_name, server_address, username, password):
         log_message(f"ERROR: {server_name}: Authentication failed for {username}, Socket Error : {e}")
         return None
 
+
+
 def perform_action(server_name, username, token):
     global actions_performed_count
     request_id = str(uuid.uuid4())
@@ -110,11 +115,11 @@ def perform_action(server_name, username, token):
         'server_name': server_name
     }
     try:
-        server_socket.sendto(json.dumps(request).encode(), (broadcast_address, udp_port))
+        client_socket.sendto(json.dumps(request).encode(), (broadcast_address, udp_port))
         start_time = time.time()
         while time.time() - start_time < 5:
             try:
-                data, addr = server_socket.recvfrom(1024)
+                data, addr = client_socket.recvfrom(1024)
                 response = json.loads(data.decode())
                 if response.get('request_id') == request_id and response.get('server_name') == server_name:
                     if 'message' in response:
@@ -132,6 +137,8 @@ def perform_action(server_name, username, token):
         log_message(f"ERROR: {server_name}: Action timeout for {username}.")
     except OSError as e:
         log_message(f"ERROR: {server_name}: Action failed for {username}, Socket error {e}")
+
+
 
 def simulate_client_activity():
     while True:
@@ -195,6 +202,8 @@ class ClientGUI:
         self.log_text.insert(tk.END, message + "\n")
         self.log_text.see(tk.END)
         self.log_text.config(state='disabled')
+
+
 
 def main():
     client_thread = threading.Thread(target=simulate_client_activity, daemon=True)
