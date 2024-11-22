@@ -1,6 +1,6 @@
 {
   "building_name": "Wells Fargo",
-  "building_logo": "wf.jpeg",
+  "building_logo": "images/wf.jpeg",
   "credentials": {
     "user1": "pass1",
     "user2": "pass2"
