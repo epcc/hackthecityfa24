@@ -1,3 +1,6 @@
 {
- "wf": "127.0.0.1:80"
+ "wf": "wf:80",
+ "chase": "chase:80",
+ "epe": "epe:80",
+ "plaza": "plaza:80"
  }
