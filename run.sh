@@ -7,4 +7,4 @@ source ~/hackenv/bin/activate
 cd /home/pi/hackthecityfa24
 
 # Run the server using authbind
-authbind python server.py
+authbind python server_udp.py
