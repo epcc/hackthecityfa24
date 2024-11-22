@@ -1,0 +1,10 @@
+{
+  "building_name": "Wells Fargo",
+  "building_logo": "wf.jpeg",
+  "credentials": {
+    "user1": "pass1",
+    "user2": "pass2"
+  },
+  "port": 80,
+  "token_expiry": 3600
+}
