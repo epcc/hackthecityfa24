@@ -141,13 +141,12 @@ def perform_action(server_name, username, token):
 
 
 def simulate_client_activity():
-    while True:
-        for server_name, server_address in SERVERS.items():
-            for creds in CLIENT_CREDENTIALS:
-                token = authenticate(server_name, server_address, creds['username'], creds['password'])
-                if token:
-                    perform_action(server_name, creds['username'], token)
-                time.sleep(1)
+    for server_name, server_address in SERVERS.items():
+        for creds in CLIENT_CREDENTIALS:
+            token = authenticate(server_name, server_address, creds['username'], creds['password'])
+            if token:
+                perform_action(server_name, creds['username'], token)
+            time.sleep(1)
 
 class ClientGUI:
     def __init__(self, root):
